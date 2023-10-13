@@ -148,3 +148,9 @@ func (bank *bank) execute(t transaction, executorId int) {
 func (bank *bank) getAccountName(accountNumber int) string {
 	return bank.accounts[accountNumber].name
 }
+
+// isAccountLocked checks if an account is locked.
+func (bank *bank) isAccountLocked(accountNumber int) bool {
+	account := bank.accounts[accountNumber]
+	return account.locked
+}
