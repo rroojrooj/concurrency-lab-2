@@ -115,7 +115,9 @@ func main() {
 	fmt.Println("Expected sum", startSum)
 	fmt.Println("Actual sum", bank.sum())
 	if bank.sum() != startSum {
-		panic("sum of the account balances does not match the starting sum")
+		panic("sum of the account balances does not much the starting sum")
+	} else if len(transactionQueue) > 0 {
+		panic("not all transactions have been executed")
 	} else if bank.moneyTransferred != expectedMoneyTransferred {
 		panic("incorrect amount of money was transferred")
 	} else {
