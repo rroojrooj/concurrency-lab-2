@@ -16,44 +16,58 @@ var readyQueue chan transaction
 
 func manager(bank *bank, transactionQueue <-chan transaction, readyQueue chan<- transaction) {
 	for t := range transactionQueue {
+		fmt.Println("Manager processing transaction from", t.from, "to", t.to)
 		for {
 			fromLocked := bank.isAccountLocked(t.from)
 			toLocked := bank.isAccountLocked(t.to)
 			if !fromLocked && !toLocked {
+				fmt.Println("Manager attempting to lock account", t.from)
 				bank.lockAccount(t.from, "Manager")
 				if bank.isAccountLocked(t.to) {
+					fmt.Println("Manager found account", t.to, "already locked. Unlocking", t.from, "and retrying...")
 					bank.unlockAccount(t.from, "Manager")
-					time.Sleep(10 * time.Millisecond) // Small sleep to avoid busy-waiting.
+					time.Sleep(10 * time.Millisecond)
 				} else {
+					fmt.Println("Manager locking account", t.to)
 					bank.lockAccount(t.to, "Manager")
 					readyQueue <- t
+					fmt.Println("Manager added transaction from", t.from, "to", t.to, "to readyQueue")
 					break
 				}
 			} else {
-				time.Sleep(10 * time.Millisecond) // Small sleep to avoid busy-waiting.
+				time.Sleep(10 * time.Millisecond)
 			}
 		}
 	}
-	close(readyQueue) // Close the readyQueue when all transactions have been processed
+	close(readyQueue)
+	fmt.Println("Manager done processing all transactions")
 }
 
 // An executor is a type of a worker goroutine that handles the incoming transactions.
 func executor(bank *bank, executorId int, transactionQueue <-chan transaction, done chan<- bool) {
-	for t := range readyQueue {
+	fmt.Println("Start of the executor")
+	for t := range transactionQueue {
+		fmt.Println("Executor", executorId, "processing transaction from", t.from, "to", t.to)
+		if !bank.isAccountLocked(t.from) || !bank.isAccountLocked(t.to) {
+			panic(fmt.Sprintf("Executor %d found accounts not locked for transaction from %d to %d", executorId, t.from, t.to))
+		}
+
 		from := bank.getAccountName(t.from)
 		to := bank.getAccountName(t.to)
 
 		fmt.Println("Executor\t", executorId, "attempting transaction from", from, "to", to)
-		e := bank.addInProgress(t, executorId) // Removing this line will break visualisations.
+		e := bank.addInProgress(t, executorId)
 
 		bank.execute(t, executorId)
 
 		bank.unlockAccount(t.from, "Executor "+strconv.Itoa(executorId))
 		bank.unlockAccount(t.to, "Executor "+strconv.Itoa(executorId))
 
-		bank.removeCompleted(e, executorId) // Removing this line will break visualisations.
+		bank.removeCompleted(e, executorId)
 		done <- true
+		fmt.Println("Executor", executorId, "completed transaction from", t.from, "to", t.to)
 	}
+	fmt.Println("Executor", executorId, "done processing all transactions")
 }
 
 func toChar(i int) rune {
