@@ -115,7 +115,7 @@ func main() {
 
 	// Executors now listen to readyQueue
 	for i := 0; i < bankSize; i++ {
-		go executor(&bank, i, readyQueue, done)
+		go executor(&bank, i, `readyQueue`, done)
 	}
 
 	for total := 0; total < transactions; total++ {
